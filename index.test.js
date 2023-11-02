@@ -21,37 +21,65 @@ describe("Social Sequelzie Test", () => {
         await Like.bulkCreate(likes);
     });
 
-    // Write your tests here
+    // User-Profile
+    describe("tests 1 to 1 user-profile association", () => {
+        test("user associates with profile", async () => {
+            const foundUser = await User.findOne({
+                where: { username: "alice_wonderland" },
+            });
+            const profile = await Profile.findOne({
+                where: { birthday: "1990-06-15" },
+            });
+            expect(foundUser.username).toBe("alice_wonderland");
+            expect(foundUser.email).toBe("alice_wonderland@example.com");
+            expect(profile.birthday).toBe("1990-06-15");
 
-    test("finds a user in User table", async () => {
-        const foundUser = await User.findOne({
-            where: { username: "alice_wonderland" },
-        });
-        const profile = await Profile.findOne({
-            where: { birthday: "1990-06-15" },
-        });
-        expect(foundUser.username).toBe("alice_wonderland");
-        expect(foundUser.email).toBe("alice_wonderland@example.com");
-        expect(profile.birthday).toBe("1990-06-15");
+            await foundUser.setProfile(profile);
 
-        await foundUser.setProfile(profile);
-
-        const userWithProfile = await User.findOne({
-            where: { username: "alice_wonderland" },
-            include: Profile,
+            const userWithProfile = await User.findOne({
+                where: { username: "alice_wonderland" },
+                include: Profile,
+            });
+            //console.log(JSON.stringify(userWithProfile, null, 2));
+            expect(userWithProfile).toEqual(
+                expect.objectContaining({
+                    Profile: expect.objectContaining({
+                        id: 1,
+                        bio: "I'm a software engineer",
+                        UserId: 4,
+                    }),
+                })
+            );
+            const associatedProfile = await foundUser.getProfile();
+            console.log(JSON.stringify(associatedProfile, null, 2));
+            expect(associatedProfile instanceof Profile).toBe(true);
         });
-        //console.log(JSON.stringify(userWithProfile, null, 2));
-        expect(userWithProfile).toEqual(
-            expect.objectContaining({
-                Profile: expect.objectContaining({
-                    id: 1,
-                    bio: "I'm a software engineer",
-                    UserId: 4,
-                }),
-            })
-        );
-        const associatedProfile = await foundUser.getProfile();
-        console.log(JSON.stringify(associatedProfile, null, 2));
-        expect(associatedProfile instanceof Profile).toBe(true);
+    });
+
+    // User-Post
+    describe("tests 1 to many user-posts association", () => {
+        test("user associates with many posts", async () => {
+            const foundUser = await User.findOne({
+                where: { username: "alice_wonderland" },
+            });
+            const post1 = await Post.findOne({
+                where: { title: "Hiking in Yosemite" },
+            });
+            const post2 = await Post.findOne({
+                where: { title: "London Street Photography" },
+            });
+
+            await foundUser.setPosts([post1, post2]);
+
+            const userWithPosts = await User.findOne({
+                where: { username: "alice_wonderland" },
+                include: Post,
+            });
+            console.log(JSON.stringify(userWithPosts, null, 2));
+            expect(userWithPosts.Posts.length).toEqual(2);
+            let test = await userWithPosts.getPosts();
+            expect(test[0] instanceof Post).toBe(true);
+            expect(test[1] instanceof Post).toBe(true);
+        });
     });
 });
